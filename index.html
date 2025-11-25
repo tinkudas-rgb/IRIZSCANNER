@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anna University ID Fraud Detection | IRIZ Scanner</title>
+    <meta
+      name="description"
+      content="Interactive blueprint for Anna University ID card fraud detection leveraging YOLOv8-OBB, PaddleOCR v4, LayoutLMv3, ELA, and Siamese font checks."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <p class="eyebrow">IRIZ Scanner · Prototype</p>
+        <h1>Anna University ID Fraud Detection Pipeline</h1>
+        <p class="hero__lead">
+          This interactive blueprint demonstrates how we mitigate common scanning
+          bottlenecks, normalize captures, map PaddleOCR output to structured
+          entities, and run a 3-layer authenticity check tailored for Anna University
+          identification cards.
+        </p>
+        <div class="hero__badges">
+          <span class="badge">YOLOv8-OBB</span>
+          <span class="badge">PaddleOCR v4</span>
+          <span class="badge">LayoutLMv3</span>
+          <span class="badge">ELA + Siamese</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="scanner" class="card section">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">Try the flow</p>
+            <h2>Hands-on Scanner &amp; Fraud Check</h2>
+            <p>
+              Upload an ID photo (or sample), paste raw OCR text, and let the demo run
+              the same logic gates we would ship in production: CLAHE-based
+              normalization, Laplacian sharpness rejects, Regex + Layout-aware entity
+              parsing, logical rule checks, ELA tamper scoring, and font consistency
+              heuristics.
+            </p>
+          </div>
+          <button id="resetButton" class="ghost-button" type="button">Reset</button>
+        </div>
+        <div class="scanner-grid">
+          <article class="scanner-panel">
+            <h3>Step 1 · Capture &amp; Normalize</h3>
+            <p class="panel__copy">
+              Handles illumination normalization (CLAHE), blur rejection via Laplacian
+              variance ≥ 100, and prepares tensors for later YOLOv8-OBB warping.
+            </p>
+            <label class="upload" for="imageInput">
+              <input id="imageInput" type="file" accept="image/*" />
+              <span>Drop an ID photo or browse</span>
+            </label>
+            <canvas id="imageCanvas" class="canvas hidden" aria-label="Normalized ID preview"></canvas>
+            <div id="imageDiagnostics" class="diagnostics"></div>
+          </article>
+
+          <article class="scanner-panel">
+            <h3>Step 2 · Text Extraction (Simulated)</h3>
+            <p class="panel__copy">
+              Paste PaddleOCR (PP-OCRv4) output here or just type the fields. The parser
+              applies LayoutLMv3-style cues, regex extraction, and fuzzy headers to map
+              Name, Reg No, Dept, Campus, and Issue Date.
+            </p>
+            <textarea
+              id="ocrInput"
+              placeholder="Example:
+ANNA UNIVERSITY
+Name: PRIYA SURESH
+Reg No: 2023104001
+Dept: COMPUTER SCIENCE AND ENGINEERING
+Campus: CHENNAI MAIN CAMPUS
+Issue Date: 15-08-2023"
+            ></textarea>
+            <button id="parseButton" class="primary-button" type="button">Run Fraud Check</button>
+          </article>
+
+          <article class="scanner-panel results-panel">
+            <h3>Step 3 · Verdict</h3>
+            <div id="statusBanner" class="status-banner status-banner--idle">
+              Awaiting input
+            </div>
+            <div id="entitySummary" class="entity-summary"></div>
+            <div id="layerSummary" class="layer-summary"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="pain-points" class="card section">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">01 · Bottlenecks &amp; Fixes</p>
+            <h2>Common Scanning Failures &amp; Remedies</h2>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Pain Point</th>
+                <th>The Problem</th>
+                <th>The Modern Solution</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Hologram Glare</td>
+                <td>Laminated cards produce specular highlights that saturate OCR.</td>
+                <td>Illumination normalization using CLAHE before OCR inference.</td>
+              </tr>
+              <tr>
+                <td>Skewed / Rotated Scanning</td>
+                <td>Users hold IDs at arbitrary angles causing perspective distortion.</td>
+                <td>YOLOv8-OBB detects oriented corners &amp; homography warp to bird's-eye.</td>
+              </tr>
+              <tr>
+                <td>Blurry Text</td>
+                <td>Out-of-focus captures hide micro-text like Issue Date.</td>
+                <td>Laplacian variance check; scores &lt; 100 are rejected immediately.</td>
+              </tr>
+              <tr>
+                <td>Field Confusion</td>
+                <td>OCR sees "CSE" &amp; "Main Campus" but lacks field context.</td>
+                <td>LayoutLMv3 understands positional semantics (text below "Department" ⇒ dept).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="architecture" class="section">
+        <div class="card-grid">
+          <article class="card card--step">
+            <p class="eyebrow">Step A</p>
+            <h3>Card Detection &amp; Warping</h3>
+            <p>
+              <strong>Model:</strong> YOLOv8 (Oriented Bounding Box). Captures 4 card
+              corners from live video, filters by confidence, then performs homography to
+              produce a flat, top-down crop ready for OCR.
+            </p>
+            <ul>
+              <li>Input: live camera feed (edge device).</li>
+              <li>Output: perspective-corrected 1024×640 tensor.</li>
+              <li>Extras: auto-suggest re-capture if glare hotspots persist.</li>
+            </ul>
+          </article>
+          <article class="card card--step">
+            <p class="eyebrow">Step B</p>
+            <h3>Text Extraction</h3>
+            <p>
+              <strong>Model:</strong> PaddleOCR (PP-OCRv4). Handles scene text with SVTR
+              recognizer, multi-language lexicons, and lightweight deployment on mobile
+              NPUs.
+            </p>
+            <ul>
+              <li>Runs on normalized crop to get sequences &amp; bounding boxes.</li>
+              <li>Feeds LayoutLMv3 with textual tokens + 2D positions.</li>
+            </ul>
+          </article>
+          <article class="card card--step">
+            <p class="eyebrow">Step C</p>
+            <h3>Entity Parsing &amp; Validation</h3>
+            <p>
+              <strong>Models:</strong> LayoutLMv3 + Regex/Fuzzy logic. Maps raw text to
+              Name, Reg No, Dept, Campus, Issue Date, University name.
+            </p>
+            <ul>
+              <li>Reg No Regex: <code>^(\d{4})(\d{6})$</code>.</li>
+              <li>Issue Date Regex: <code>\d{2}[/-]\d{2}[/-]\d{4}</code>.</li>
+              <li>Levenshtein + header anchors for Dept/Campus.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="fraud-layers" class="card section">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">02 · 3-Layer Security</p>
+            <h2>Fake vs Real Decision Stack</h2>
+          </div>
+        </div>
+        <div class="layer-grid">
+          <article>
+            <h3>Layer 1 · Logical Checks</h3>
+            <ul>
+              <li>Validate 4-digit year + 6-digit Reg No format.</li>
+              <li>Issue Date year ≥ joining year (Reg No prefix).</li>
+              <li>Dept code embedded in Reg No must match printed Dept text.</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Layer 2 · Visual Forgery (ELA)</h3>
+            <ul>
+              <li>Run Error Level Analysis to catch Photoshop edits.</li>
+              <li>MobileNetV3 classifier trained on CASIA v2 tamper dataset.</li>
+              <li>Highlight suspicious noise around Name/RegNo boxes.</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Layer 3 · Font Consistency</h3>
+            <ul>
+              <li>Siamese network compares Reg No glyphs to gold standard.</li>
+              <li>Detects serif vs sans mismatch, kerning anomalies, stroke width.</li>
+              <li>Triggers manual review when similarity drops below 0.82.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="tech-notes" class="card section">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">03 · Implementation Notes</p>
+            <h2>Engineering Checklist</h2>
+          </div>
+        </div>
+        <ul class="bullet-list">
+          <li>
+            <strong>Edge Compatibility:</strong> Models run via ONNX Runtime / TFLite on
+            Android devices with optional GPU delegate.
+          </li>
+          <li>
+            <strong>Security:</strong> All inference is on-device; only metadata (verdict,
+            hashed Reg No) leaves the device.
+          </li>
+          <li>
+            <strong>Observability:</strong> Structured logs push to the fraud backend with
+            scores from each layer, making audits painless.
+          </li>
+          <li>
+            <strong>Extensibility:</strong> Plug in new regexes (e.g., staff IDs) or add
+            risk signals such as duplicate Reg Nos within 90 days.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>© <span id="year"></span> IRIZ Scanner · Built for Anna University authenticity.</p>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
