@@ -1,0 +1,11 @@
+# General build artifacts
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.env
+.env.*
