@@ -419,6 +419,8 @@
     const visual = [];
     const typography = [];
 
+    logical.push(...evaluateFieldCoverage(entities));
+
     const regValid = /^\d{10}$/.test(entities.regNo || '');
     logical.push(createCheck('Reg No structure', regValid, 'Must be 4-digit year + 6-digit code'));
 
@@ -453,6 +455,63 @@
     }
 
     return { status, logical, visual, typography };
+  }
+
+  function evaluateFieldCoverage(entities) {
+    return [
+      validateNameField(entities.name),
+      validateDepartmentField(entities.dept),
+      validateCampusField(entities.campus),
+      validateIssueDateField(entities.issueDate),
+    ];
+  }
+
+  function validateNameField(name) {
+    if (!name) {
+      return createCheck('Name field extraction', false, 'Name missing or unreadable', 'warn');
+    }
+    const trimmed = name.trim();
+    const normalized = trimmed.replace(/\s+/g, ' ');
+    const looksValid = normalized.length >= 3 && /^[A-Za-z .'-]+$/.test(normalized) && /[A-Za-z]/.test(normalized);
+    const message = looksValid ? `Captured "${normalized}"` : `Value "${trimmed}" looks invalid`;
+    return createCheck('Name field extraction', looksValid, message, looksValid ? 'info' : 'warn');
+  }
+
+  function validateDepartmentField(dept) {
+    if (!dept) {
+      return createCheck('Department field extraction', false, 'Department missing or unreadable', 'warn');
+    }
+    const trimmed = dept.trim();
+    const normalized = canonicalizeDept(dept);
+    const looksValid = Boolean(normalized && normalized.length >= 3);
+    const displayValue = trimmed || normalized;
+    const message = looksValid ? `Department detected: ${displayValue}` : `Value "${dept}" looks invalid`;
+    return createCheck('Department field extraction', looksValid, message, looksValid ? 'info' : 'warn');
+  }
+
+  function validateCampusField(campus) {
+    if (!campus) {
+      return createCheck('Campus field extraction', false, 'Campus missing or unreadable', 'warn');
+    }
+    const trimmed = campus.trim();
+    const looksValid = trimmed.length >= 3 && /[A-Za-z]/.test(trimmed);
+    const message = looksValid ? `Campus detected: ${trimmed}` : `Value "${campus}" looks invalid`;
+    return createCheck('Campus field extraction', looksValid, message, looksValid ? 'info' : 'warn');
+  }
+
+  function validateIssueDateField(issueDate) {
+    if (!issueDate) {
+      return createCheck('Issue Date extraction', false, 'Issue Date missing or unreadable', 'warn');
+    }
+    const parsed = parseIssueDate(issueDate);
+    if (!parsed) {
+      return createCheck('Issue Date extraction', false, 'Issue Date format invalid', 'error');
+    }
+    if (parsed > new Date()) {
+      return createCheck('Issue Date extraction', false, 'Issue date appears to be in the future', 'warn');
+    }
+    const humanReadable = parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return createCheck('Issue Date extraction', true, `Captured ${humanReadable}`, 'info');
   }
 
   function createCheck(label, passed, message, severity = 'error') {

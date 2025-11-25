@@ -19,6 +19,7 @@ Fraud detection layers implemented in the UI:
 1. **Logical sanity:**
    - Reg No must match `^(\d{4})(\d{6})$` (joining year + 6 digits).
    - Issue Date year must be ≥ joining year.
+   - OCR must surface Name, Dept, Campus, and Issue Date values; missing or malformed fields raise warnings.
    - Department string must align with the embedded 3-digit dept code.
    - Anna University mention must be detected somewhere in the OCR text.
 2. **Visual forensics:**
